@@ -2,10 +2,8 @@
 
 require 'optparse'
 
-HANDBRAKE_CLI_PATH = "./HandbrakeCLI"
-
 def extractTracksAndLengths(file)
-  command = HANDBRAKE_CLI_PATH + " -t 0 -i '#{file}' 2>&1"
+  command = "HandBrakeCLI -t 0 -i '#{file}' 2>&1"
   tracksAndLengths = Array.new
 
   currentTrack = 0
@@ -112,18 +110,24 @@ toEncode = processDiscs(options[:discs], options[:episodesPerDisc],
                         options[:episodesTotal], options[:episodeLength])
 
 print <<END
-!/bin/bash
+#!/bin/bash
+
+trap { killall HandBrakeCLI; exit 0 } SIGTSTP
 
 encodeFile() {
-  if [ -e $1.encoding ]; then
-    rm $1.encoding
-    rm $1
+  if [ -e "$1.encoding" ]; then
+    echo "Resuming encoding for $1"
+
+    rm "$1.encoding"
+    rm "$1"
   fi
 
-  if [ ! -e $1 ]; then
-    touch $1.encoding
-    ./HandbrakeCLI -o $1 -i $2 -t $3 -Z "AppleTV 3" -m
-    rm $1.encoding
+  if [ ! -e "$1" ]; then
+    echo "Encoding $1: "
+
+    touch "$1.encoding"
+    HandbrakeCLI -o "$1" -i "$2" -t $3 -Z "AppleTV 3" -m 2>/dev/null
+    rm "$1.encoding"
   else
     echo "Skipping $1"
   fi
@@ -136,5 +140,5 @@ toEncode.each do |encodeSource|
   outputName = options[:namingScheme] % episodeNum
   episodeNum = episodeNum + 1
 
-  print   "encodeFile('#{outputName}', '#{encodeSource[:disc]}', " + "#{encodeSource[:track]})\n"
+  print   "encodeFile '#{outputName}' '#{encodeSource[:disc]}' " + "#{encodeSource[:track]}\n"
 end
