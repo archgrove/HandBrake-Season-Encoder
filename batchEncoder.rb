@@ -79,6 +79,7 @@ optParser = OptionParser.new do |opts|
   options[:episodeLength] = 45 * 60
   options[:episodesPerDisc] = 4
   options[:episodesTotal] = 24
+  options[:audioTrack] = 1
 
   opts.banner = "Usage: batchEncoder.rb [options]"
 
@@ -100,6 +101,10 @@ optParser = OptionParser.new do |opts|
 
   opts.on('-e', "--epsiodes-total E", Integer, "Expected total episodes") do |p|
     options[:episodesTotal] = p
+  end
+
+  opts.on('-a', "--audio-track A", Integer, "Audio track to use") do |p|
+    options[:audioTrack] = p
   end
 end
 
@@ -126,7 +131,7 @@ encodeFile() {
     echo "Encoding $1: "
 
     touch "$1.encoding"
-    HandbrakeCLI -o "$1" -i "$2" -t $3 -Z "AppleTV 3" -m 2>/dev/null
+    HandbrakeCLI -o "$1" -i "$2" -t $3 -a $4 -Z "AppleTV 3" -m 2>/dev/null
     rm "$1.encoding"
   else
     echo "Skipping $1"
@@ -140,5 +145,5 @@ toEncode.each do |encodeSource|
   outputName = options[:namingScheme] % episodeNum
   episodeNum = episodeNum + 1
 
-  print   "encodeFile '#{outputName}' '#{encodeSource[:disc]}' " + "#{encodeSource[:track]}\n"
+  print   "encodeFile '#{outputName}' '#{encodeSource[:disc]}' " + "#{encodeSource[:track]} #{options[:audioTrack]}\n"
 end
