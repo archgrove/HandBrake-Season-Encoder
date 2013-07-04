@@ -94,11 +94,11 @@ optParser = OptionParser.new do |opts|
     options[:episodeLength] = p * 60
   end
   
-  opts.on('-d', "--episodes-per-disc D", "Expected episodes per disc") do |p|
+  opts.on('-d', "--episodes-per-disc D", Integer, "Expected episodes per disc") do |p|
     options[:episodesPerDisc] = p
   end
 
-  opts.on('-e', "--epsiodes-total E", "Expected total episodes") do |p|
+  opts.on('-e', "--epsiodes-total E", Integer, "Expected total episodes") do |p|
     options[:episodesTotal] = p
   end
 end
