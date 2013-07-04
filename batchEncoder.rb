@@ -112,7 +112,7 @@ toEncode = processDiscs(options[:discs], options[:episodesPerDisc],
 print <<END
 #!/bin/bash
 
-trap { "killall HandBrakeCLI; exit 0" } SIGTSTP
+trap "{ killall HandBrakeCLI; exit 0 }" SIGTSTP
 
 encodeFile() {
   if [ -e "$1.encoding" ]; then
