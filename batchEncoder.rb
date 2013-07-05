@@ -80,6 +80,7 @@ optParser = OptionParser.new do |opts|
   options[:episodesPerDisc] = 4
   options[:episodesTotal] = 24
   options[:audioTrack] = 1
+  options[:startAt] = 1
 
   opts.banner = "Usage: batchEncoder.rb [options]"
 
@@ -105,6 +106,10 @@ optParser = OptionParser.new do |opts|
 
   opts.on('-a', "--audio-track A", Integer, "Audio track to use") do |p|
     options[:audioTrack] = p
+  end
+
+  opts.on('-s', "--start-at S", Integer, "Episode index to begin at") do |p|
+    options[:startAt] = p
   end
 end
 
@@ -140,8 +145,8 @@ encodeFile() {
 
 END
 
-episodeNum = 1
-toEncode.each do |encodeSource|
+episodeNum = options[:startAt]
+toEncode.drop(options[:startAt] - 1).each do |encodeSource|
   outputName = options[:namingScheme] % episodeNum
   episodeNum = episodeNum + 1
 
