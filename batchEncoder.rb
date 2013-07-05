@@ -35,32 +35,53 @@ def extractTracksAndLengths(file)
 end
 
 
-def selectTracks(tracksAndLengths, targetLength, delta)
+def selectTracks(tracksAndLengths, targetLengths, delta)
   return tracksAndLengths.reject do |val|
-    # Reject anything falling further than delta from the target
-    (val[:length] - targetLength).abs > delta
+    # Reject anything that is more than delta from every target length
+    targetLengths.map do |targetLength|
+      (val[:length] - targetLength).abs > delta 
+    end.each.reduce(:&)
   end
 end
 
-def processDiscs(discs, perDisc, total, length)
+def processDiscs(discs, perDisc, total, length, allowDouble)
   allTracks = Array.new
+  foundDoubles = 0
 
   discs.each do |disc|
     discTracks = extractTracksAndLengths(disc)
+    lengths = allowDouble ? [length, length * 2] : [length]
+    delta = length / 10
 
     if discTracks == nil
       print "File \"#{disc}\" is not a media disc \n"
     elsif
-      selectedTracks = selectTracks(discTracks, length, length / 10)
+      selectedTracks = selectTracks(discTracks, lengths, delta)
 
-      [perDisc, selectedTracks.length].min.times do |i|
+      foundEpisodes = 0
+      i = 0
+
+      while (i < selectedTracks.length) && (foundEpisodes < perDisc) do
+        isDouble = (selectedTracks[i][:length] > length + delta)
+
         allTracks << { :disc => disc, :track => selectedTracks[i][:index], 
-                       :length => selectedTracks[i][:length] }
+                       :length => selectedTracks[i][:length],
+                       :isDouble => isDouble }
+
+        # Allow for double episodes
+        if (isDouble) then
+          foundEpisodes += 2
+          foundDoubles += 1
+        else
+          foundEpisodes += 1
+        end
+
+        i += 1
       end
     end
   end
 
-  return allTracks.slice(0, total)
+  return allTracks.slice(0, total - foundDoubles)
 end
 
 # Pull out parameters
@@ -76,11 +97,13 @@ options = Hash.new
 optParser = OptionParser.new do |opts|
   options[:outputDir] = "."
   options[:namingScheme] = "Episode %i.m4v"
+  options[:doubleNamingScheme] = "Episodes %i and %i.m4v"
   options[:episodeLength] = 45 * 60
   options[:episodesPerDisc] = 4
   options[:episodesTotal] = 24
   options[:audioTrack] = 1
   options[:startAt] = 1
+  options[:allowDouble] = false
 
   opts.banner = "Usage: batchEncoder.rb [options]"
 
@@ -90,6 +113,10 @@ optParser = OptionParser.new do |opts|
 
   opts.on('-n', "--naming-scheme N", "Naming scheme for episodes") do |p|
     options[:namingScheme] = p
+  end
+
+  opts.on('-nn', "--double-naming-scheme N", "Naming scheme for double episodes") do |p|
+    options[:doubleNamingScheme] = p
   end
 
   opts.on('-l', "--episode-length L", Integer, "Length of episodes (minutes)") do |p|
@@ -111,13 +138,18 @@ optParser = OptionParser.new do |opts|
   opts.on('-s', "--start-at S", Integer, "Episode index to begin at") do |p|
     options[:startAt] = p
   end
+
+  opts.on('-m', "--allow-double", "Allow double-length episodes") do |p|
+    options[:allowDouble] = true
+  end
 end
 
 optParser.parse!
 options[:discs] = ARGV
 
 toEncode = processDiscs(options[:discs], options[:episodesPerDisc],
-                        options[:episodesTotal], options[:episodeLength])
+                        options[:episodesTotal], options[:episodeLength],
+                        options[:allowDouble])
 
 print <<END
 #!/bin/bash
@@ -147,8 +179,14 @@ END
 
 episodeNum = options[:startAt]
 toEncode.drop(options[:startAt] - 1).each do |encodeSource|
-  outputName = options[:namingScheme] % episodeNum
-  episodeNum = episodeNum + 1
+  if (encodeSource[:isDouble]) then
+    outputName = options[:doubleNamingScheme] % [episodeNum, episodeNum + 1]
+    episodeNum = episodeNum + 2
+  else
+    outputName = options[:namingScheme] % episodeNum
+    episodeNum = episodeNum + 1
+  end
+
 
   print   "encodeFile '#{outputName}' '#{encodeSource[:disc]}' " + "#{encodeSource[:track]} #{options[:audioTrack]}\n"
 end
