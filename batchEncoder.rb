@@ -7,6 +7,7 @@ def extractTracksAndLengths(file)
   tracksAndLengths = Array.new
 
   currentTrack = 0
+  currentBlocks = 0
 
   process = IO.popen(command)
   
@@ -18,6 +19,9 @@ def extractTracksAndLengths(file)
     # Tracks have format "+ title X:"
     if /\+ title (\d+):/ =~ cleanLine
       currentTrack = $~[1]
+    # Blocks are + vts 2, ttn 3, cells 0->7 (962954 blocks)
+    elsif /\+ vts (\d+), ttn (\d+), cells (\d+)->(\d+) \((\d+) blocks\)/ =~ cleanLine
+      currentBlocks = $~[5].to_i
     # Durations have format "  + duration: XX:YY:ZZ"
     elsif /\+ duration: (\d+):(\d+):(\d+)/ =~ cleanLine
       hours = $~[1].to_i
@@ -25,7 +29,8 @@ def extractTracksAndLengths(file)
       secs = $~[3].to_i
       totalSecs = (hours * 60 * 60) + (mins * 60) + secs
 
-      tracksAndLengths << { :index => currentTrack, :length => totalSecs }
+      tracksAndLengths << { :index => currentTrack, :length => totalSecs,
+                            :blocks => currentBlocks }
     end
   }
 
@@ -36,8 +41,9 @@ end
 
 
 def selectTracks(tracksAndLengths, targetLengths, delta)
-  return tracksAndLengths.reject do |val|
-    # Reject anything that is more than delta from every target length
+  # Reject anything with identical blocks length, then anything 
+  # that is more than delta from every target length
+  return tracksAndLengths.uniq { |val| val[:blocks] }.reject do |val|
     targetLengths.map do |targetLength|
       (val[:length] - targetLength).abs > delta 
     end.each.reduce(:&)
