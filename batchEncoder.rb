@@ -43,7 +43,16 @@ end
 def selectTracks(tracksAndLengths, targetLengths, delta)
   # Reject anything with identical blocks length, then anything 
   # that is more than delta from every target length
-  return tracksAndLengths.uniq { |val| val[:blocks] }.reject do |val|
+  
+  # Ruby 1.8.7 has no uniq(block) call for filtering, so we fake it
+  blockUniqTracks = Array.new
+  tracksAndLengths.each do |val|
+    if blockUniqTracks.index { |uniq| uniq[:blocks] == val[:blocks] } == nil
+      blockUniqTracks << val
+    end
+  end
+
+  return blockUniqTracks.reject do |val|
     targetLengths.map do |targetLength|
       (val[:length] - targetLength).abs > delta 
     end.each.reduce(:&)
