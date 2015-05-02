@@ -59,14 +59,14 @@ def selectTracks(tracksAndLengths, targetLengths, delta)
   end
 end
 
-def processDiscs(discs, perDisc, total, length, allowDouble)
+def processDiscs(discs, perDisc, total, length, allowDouble, jitter)
   allTracks = Array.new
   foundDoubles = 0
 
   discs.each do |disc|
     discTracks = extractTracksAndLengths(disc)
     lengths = allowDouble ? [length, length * 2] : [length]
-    delta = length / 10
+    delta = length * jitter / 100
 
     if discTracks == nil
       print "File \"#{disc}\" is not a media disc \n"
@@ -119,6 +119,7 @@ optParser = OptionParser.new do |opts|
   options[:audioTrack] = 1
   options[:startAt] = 1
   options[:allowDouble] = false
+  options[:jitter] = 15
 
   opts.banner = "Usage: batchEncoder.rb [options]"
 
@@ -157,6 +158,10 @@ optParser = OptionParser.new do |opts|
   opts.on('-m', "--allow-double", "Allow double-length episodes") do |p|
     options[:allowDouble] = true
   end
+
+  opts.on('-j', "--jitter J", Integer, "Accepts episodes within the jitter percentage of an episode length") do |p|
+    options[:jitter] = p
+  end
 end
 
 optParser.parse!
@@ -164,7 +169,7 @@ options[:discs] = ARGV
 
 toEncode = processDiscs(options[:discs], options[:episodesPerDisc],
                         options[:episodesTotal], options[:episodeLength],
-                        options[:allowDouble])
+                        options[:allowDouble], options[:jitter])
 
 print <<END
 #!/bin/bash
