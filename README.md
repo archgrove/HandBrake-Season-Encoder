@@ -5,6 +5,8 @@ The HandBrake Season Encoder takes a set of DVD images comprising a number of ep
 
 # Usage
 
+The system expects the [command line Handbrake encoder](https://handbrake.fr/downloads2.php) `HandbrakeCLI` to be on your `PATH`.
+
     batchEncoder.rb pathToDISC1 pathToDISC2 ... pathToDISCn
 
 That is,
